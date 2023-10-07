@@ -39,6 +39,8 @@ void write(int x)
 
 ### 随机数生成
 
+##### [a, b]的随机数
+
 ```cpp
 mt19937 eng(time(0));
 int randint(int a, int b)
@@ -47,6 +49,54 @@ int randint(int a, int b)
     return dis(eng);
 }
 ```
+
+##### xor shift
+
+映射到$$2^{64}$$
+
+```cpp
+const ull mask = std::chrono::steady_clock::now().time_since_epoch().count();
+ull shift(ull x){
+    x^=x<<13;
+    x^=x>>7;
+    x^=x<<17;
+    x^=mask;
+    return x;
+}
+```
+
+### memset
+
+##### int / long long
+
+“较”的原则：加法不爆
+
+- 极大值: 0x7f
+- 较大值: 0x3f
+- 较小值: 0xc0
+- 极小值: 0x80
+
+##### float
+
+“较”的原则：保证一定位精度
+
+7f以上一直到be都是-0（很小的>-1.0的负数）
+
+- 极大值：0x7f
+- 较大值：0x4f
+- 较小值：0xce
+- 极小值：0xfe
+
+##### double
+
+“较”的原则：保证一定位精度
+
+- 极大值：0x7f
+- 较大值：0x43
+- 较小值：0xc2
+- 极小值：0xfe
+
+
 
 ### 快速幂
 
@@ -302,6 +352,8 @@ SegmentTree tri;
 
 ##### 两次dfs
 
+任意一点出发找到最远点$$A$$，$$A$$一定在直径上，再从$$A$$出发找到最远点$$B$$，$$B$$即为直径
+
 ```cpp
 vector<pair<int,int>>arc[N];
 void dfs(int x,int f,int d)
@@ -342,6 +394,8 @@ void Dfs(int x,int f)
 
 ##### 倍增
 
+树上倍增
+
 ```cpp
 vector<int>arc[N];
 int deep[N],fa[N][20];
@@ -376,6 +430,8 @@ int LCA(int x,int y)
 
 ##### tarjan
 
+离线之后并查集找LCA
+
 ```cpp
 vector<pair<int,int>>arc[N];
 int fa[N],ans[N];
@@ -408,6 +464,8 @@ void tarjan(int x,int f)
 ```
 
 ### 缩点
+
+将强连通分量缩为一个点，原图变为DAG
 
 ##### Tarjan缩点
 
@@ -698,7 +756,74 @@ int main(){
 }
 ```
 
+### 树哈希
+
+$$
+f(S)=(c+\sum_{x\in S}g(x))\mod m
+$$
+
+$$
+一般取c=1,\ g为整数到整数的映射
+$$
+
+```cpp
+const ull mask = std::chrono::steady_clock::now().time_since_epoch().count();
+ull shift(int x){
+    x^=x<<13;
+    x^=x>>7;
+    x^=x<<17;
+    x^=mask;
+    return x;
+}
+ull Hash[N];
+set<ull>st;
+void dfs(int x,int f){
+    Hash[x]=1;
+    for(auto it:G[x]){
+        if(it==f)
+            continue;
+        dfs(it,x);
+        Hash[x]+=shift(Hash[it]);
+    }
+    st.insert(Hash[x]);
+}
+```
+
 ## 数学
+
+### 常见数论函数
+
+##### 欧拉函数
+
+$$
+\varphi(x)=x\cdot \Pi(1-\frac{1}{p_i})
+$$
+
+##### 性质
+
+$$
+\phi(x)=\sum_{d\mid n}\frac{\mu(d)}{d}
+$$
+
+### 费马小定理
+
+$$
+p\in Prim\Rightarrow a^{p-1}\equiv 1\mod p
+$$
+
+
+
+### 欧拉定理
+
+$$
+(a,m)=1\Rightarrow a^{\phi(m)}\equiv 1\mod m
+$$
+
+##### 扩展欧拉定理
+
+$$
+a^b\equiv a^{b\mod \phi(m)+\phi(m)}\mod m \ \ (b\ge\phi(m))
+$$
 
 ### 高斯消元
 
@@ -797,7 +922,12 @@ int lcm(int a,int b)
 
 ### 扩展欧几里得
 
-返回d=gcd(a,b);以及ax+by=d的特解x,y
+返回$$ d=gcd(a,b) $$ ;以及$$ax+by=d$$的特解$$x_0,y_0$$
+
+通解：
+$$
+x=\frac{c}{d}x_0+\frac{b}{d}t, \ y=\frac{c}{d}y_0-\frac{a}{d}t
+$$
 
 ```cpp
 ll extend_gcd(ll a,ll b,ll &x,ll &y)
@@ -824,6 +954,10 @@ ll mod_inverse(ll a,ll m)
 
 ##### 快速幂
 
+$$
+a^{-1}\equiv a^{p-2}\mod p
+$$
+
 ```cpp
 ll mod_inverse(ll a,ll m)
 {
@@ -832,6 +966,8 @@ ll mod_inverse(ll a,ll m)
 ```
 
 ##### 递推
+
+求$$1-n$$的所有逆元
 
 ```cpp
 void mod_inverse(ll n,ll p)
@@ -938,6 +1074,8 @@ void init()
 
 ##### Miller Rabin
 
+复杂度$$O(\log n)$$
+
 ```cpp
 bool is_prime(int x)
 {
@@ -974,6 +1112,8 @@ bool is_prime(int x)
 
 ##### Pollard Rho
 
+找出一个约数的时间复杂度$$O(n^{\frac{1}{4}})$$
+
 ```cpp
 mt19937 eng(time(0));
 int randint(int a, int b)
@@ -1001,6 +1141,20 @@ int Pollard_Rho(int n){
 
 ##### bsgs
 
+对$$a,b\in Z^+$$，可以以$$O(\sqrt{m})$$的复杂度内求解
+$$
+a^x\equiv b\mod m
+$$
+其中$$(a,m)=1$$，解$$0\le x<m$$，$$m$$不一定是素数
+
+
+
+取$$x=A\lceil\sqrt{m}\rceil -B$$，其中$$0\le A,B\le \lceil\sqrt{m}\rceil$$，有$$a^{A\lceil\sqrt{m}\rceil-B}\equiv b\mod m$$
+
+$$\iff a^{A\lceil\sqrt{m}\rceil}\equiv ba^B\mod m$$
+
+同时枚举左右两边，用hashmap存，可以$$O(\sqrt{m})$$的复杂度内解决
+
 ```cpp
 ll BSGS(ll a, ll b, ll m)
 {
@@ -1025,6 +1179,8 @@ ll BSGS(ll a, ll b, ll m)
 ```
 
 ##### 扩展bsgs
+
+$$a,m$$不一定互质
 
 ```cpp
 // 修改版的BSGS，额外带一个系数
@@ -1066,6 +1222,28 @@ ll exBSGS(ll a, ll b, ll m, ll k = 1)
 
 ### 组合数
 
+$$
+(^n_m)=C_n^m=\frac{P_n^m}{P_m}=\frac{n!}{m!(n-m)!}
+$$
+
+##### 组合恒等式
+
+$$
+C_n^k=C_n^{m-k}
+$$
+
+$$
+C_{n+1}^k=C_n^k+C_n^{k-1}
+$$
+
+$$
+(C_n^0)^2+(C_n^1)^2+(C_n^2)^2+...+(C_n^n)^2=C_{2n}^n=\frac{(2n)!}{(n!)^2}
+$$
+
+$$
+C_{-n}^k=\frac{(-n)(-n-1)(-n-2)...(-n-k+1)}{k!}=(-1)^kC_{n+k-1}^{k}
+$$
+
 ##### 预处理阶乘
 
 ```cpp
@@ -1081,7 +1259,25 @@ void init(int n)
 }
 ```
 
-##### Lucas
+#### Lucas
+
+$$
+p\in Prim,\ C_n^m\equiv C_{n/p}^{m/p}\cdot C_{n\%p}^{m\%p}\mod p
+$$
+
+模数较小，但组合数很大
+
+##### 推论：
+
+$$
+m,n\in Z^+,p\in Prim,\ C_n^m\equiv \Pi_{i=0}^kC_{n_i}^{m_i}
+$$
+
+$$
+m=m_kp^k+\dots+m_1p+m_0,\ n=n_kp^k+\dots+n_1p+n_0
+$$
+
+
 
 ```cpp
 int C(int n,int m,int p)
@@ -1098,6 +1294,80 @@ int Lucas(int n,int m,int p)
 }
 ```
 
+### Wilson定理
+
+$$
+p\in Prim,\ (p-1)!\equiv -1\mod p
+$$
+
+### 中国剩余定理
+
+$$
+\begin{align*}
+ x\equiv a_1 \mod m_1 \\
+ x\equiv a_2 \mod m_2 \\
+ \vdots  \\
+ x\equiv a_k \mod m_k 
+\end{align*}
+$$
+
+其中$$m_i,m_j$$两两互质
+
+设：
+$$
+M=\Pi_{i=1}^km_i,\ M_i=\frac{M}{m_i},\ M_i^{-1}\cdot M_i\equiv 1\mod m_i
+$$
+方程组在模$$M$$意义下有唯一解
+$$
+x\equiv \sum_{i=1}^ka_iM_iM_i^{-1}\mod M
+$$
+
+### 升幂引理(LTE)
+
+$$v_p(n)$$为$$n$$的标准分解中质因数$$p$$的幂次，即$$v_p(n)$$满足$$p^{v_p(n)}\mid n$$且$$p^{v_p(n)+1}\nmid n$$
+
+
+
+以下设$$p\in Prim,x,y\in Z,p\nmid x,p\nmid y,n\in Z^+$$
+
+- 第一部分：$$p\in Prim,(n,p)=1$$
+
+  1. 若$$p\mid (x-y)$$，则
+     $$
+     v_p(x^n-y^n)=v_p(x-y)
+     $$
+
+  2. 
+
+  2. 若$$p\mid (x+y),n奇$$，则
+     $$
+     v_p(x^n+y^n)=v_p(x+y)
+     $$
+
+- 第二部分：$$p$$奇素数
+
+  1. 若$$p\mid (x-y)$$，则
+     $$
+     v_p(x^n-y^n)=v_p(x-y)+v_p(n)
+     $$
+
+  2. 若$$p\mid (x+y)$$，则对奇数$$n$$有
+     $$
+     v_p(x^n+y^n)=v_p(x+y)+v_p(n)
+     $$
+
+- 第三部分：$$p=2$$且$$p\mid (x-y)$$
+
+  1. 对奇数$$n$$有
+     $$
+     v_p(x^n-y^n)=v_p(x-y)
+     $$
+
+  2. 对偶数$$n$$有
+     $$
+     v_p(x^n-y^n)=v_p(x-y)+v_p(x+y)+v_p(n)-1
+     $$
+
 ### 类欧几里得
 
 $$
@@ -1105,8 +1375,10 @@ f(x)=\frac{ax+b}{c}, 求x\in [0,n]且x\in Z时, f(x)下的整点个数之和
 $$
 
 $$
-\sum_{i=0}^n \lfloor\frac{ai+b}{c}\rfloor
+f(a,b,c,n)=\sum_{i=0}^n \lfloor\frac{ai+b}{c}\rfloor
 $$
+
+时间复杂度$$O(\log n)$$
 
 ```cpp
 ll f(ll a, ll b, ll c, ll n) {
@@ -1117,6 +1389,90 @@ ll f(ll a, ll b, ll c, ll n) {
 	return n * m - f(c, c - b - 1, a, m - 1);
 }
 ```
+
+### 阶
+
+##### 定义
+
+若满足$$a^n\equiv 1\mod m$$的最小正整数$n$存在，这个$$n$$称为$$a$$模$$m$$的阶，记作$$n=\delta_m(a)$$或$$ord_m(a)$$
+
+##### 性质
+
+- $$a,a^2,\dots,a^{\delta_m(a)}$$模$$m$$两两不同余
+
+- 若$$a^n\equiv 1\mod m$$，则$$\delta_m(a)\mid n$$
+
+- $$a^p\equiv a^q\Rightarrow p\equiv q\mod \delta_m(a)$$
+
+- $$m\in N^*,a,b\in Z,(a,m)=(b,m)=1$$，则
+  $$
+  \delta_m(ab)=\delta_m(a)\delta_m(b)\iff (\delta_m(a),\delta_m(b))=1
+  $$
+
+- $$k\in N,m\in N^*,a\in Z,(a,m)=1$$，则
+  $$
+  \delta_m(a^k)=\frac{\delta_m(a)}{(\delta_m(a),k)}
+  $$
+
+- 
+
+### 原根
+
+##### 定义
+
+若$$(g,m)=1$$且$$\delta_m(g)=\phi(m)$$，则称$$g$$为模$$m$$的原根
+
+##### 性质
+
+若一个数$$m$$有原根，则它原根的个数为$$\phi(\phi(m))$$
+
+##### 原根存在定理
+
+一个数$$m$$存在原根当且仅当$$m=2,4,p^\alpha,2p^\alpha$$，其中$$p$$为奇素数，$$\alpha\in N^*$$
+
+### 莫比乌斯反演
+
+##### 莫比乌斯函数
+
+$$
+\mu(n)=
+\begin{cases}
+1 & n=1\\
+0 & n含有平方因子\\
+(-1)^k & k为n的本质不同质因子个数
+\end{cases}
+$$
+
+##### 性质
+
+- 积性函数
+
+- $$
+  \sum_{d\mid n}\mu(d)=
+  \begin{cases}
+  1 & n=1\\
+  0 & n\not = 1
+  \end{cases}
+  \iff \sum_{d\mid n}\mu(d)=\varepsilon(n)=[n==1],\ \mu *1=\varepsilon
+  $$
+
+- $$
+  [gcd(i,j)==1]=\sum_{d\mid gcd(i,j)}\mu(d)
+  $$
+
+- 
+
+##### 莫比乌斯变换
+
+设$$f(n),g(n)$$为数论函数
+$$
+f(n)=\sum_{d\mid n}g(d)\Rightarrow g(n)=\sum_{d\mid n}\mu(d)f(\frac{n}{d})
+$$
+$$f(n)$$称为$$g(n)$$的莫比乌斯变换，$$g(n)$$称为$$f(n)$$的莫比乌斯逆变换（反演）
+$$
+f(n)=\sum_{n\mid d}g(d)\Rightarrow g(n)=\sum_{n\mid d}\mu(\frac{d}{n})f(d)
+$$
+
 
 ### BM线性递推
 
@@ -1246,6 +1602,97 @@ signed main() {
 }
 ```
 
+### 斐波那契数
+
+$$
+F_n=F_{n-1}+F_{n-2},\ F_0=0,F_1=1
+$$
+
+##### 性质
+
+- $$
+  F_{n-1}F_{n+1}-F_n^2=(-1)^n
+  $$
+
+- $$
+  F_{n+k}=F_kF_{n+1}+F_{k-1}F_n
+  $$
+
+- $$
+  F_{2n}=F_n(F_{n+1}+F_{n-1})
+  $$
+
+- $$
+  a\mid b\iff F_a\mid F_b
+  $$
+
+- $$
+  gcd(F_m,F_n)=F_{gcd(m,n)}
+  $$
+
+  
+
+### 卡特兰(Catalan)数
+
+$$
+H_n=\frac{C_{2n}^n}{n+1} ,\ n\ge 2,n\in N^+,\ H_0=H_1=1
+$$
+
+$$
+H_n=
+\begin{cases}
+\sum_{i=1}^nH_{i-1}H_{n-i} & n\ge 2,n\in N^+\\
+1 & n=0,1
+\end{cases}
+$$
+
+$$
+H_n=\frac{H_{n-1}(4n-2)}{n+1}
+$$
+
+$$
+H_n=C_{2n}^n-C_{2n}^{n-1}
+$$
+
+##### 封闭形式
+
+$$
+H(x)=\frac{1-\sqrt{1-4x}}{2x}=\sum_{n\ge 0}C_{2n}^n\frac{1}{n+1}x^n
+$$
+
+##### 典型问题
+
+- 有$$2n$$个人排成一行进入剧场。入场费 5 元。其中只有$$n$$个人有一张 5 元钞票，另外$$n$$人只有 10 元钞票，剧院无其它钞票，问有多少种方法使得只要有 10 元的人买票，售票处就有 5 元的钞票找零？
+- 一位大城市的律师在她住所以北$$n$$个街区和以东$$n$$个街区处工作。每天她走$$2n$$个街区去上班。如果他从不穿越（但可以碰到)从家到办公室的对角线，那么有多少条可能的道路？
+- 在圆上选择$$2n$$个点，将这些点成对连接起来使得所得到的$$n$$条线段不相交的方法数？
+- 对角线不相交的情况下，将一个凸多边形区域分成三角形区域的方法数？
+- 一个栈（无穷大）的进栈序列为$$1,2,\dots,n$$，有多少个不同的出栈序列？
+- $$n$$个结点可构造多少个不同的二叉树？
+- $$n$$个$$+1$$和$$n$$个$$-1$$构成$$2n$$项 $$a_1,a_2,\dots,a_{2n}$$，其部分和满足$$a_1+a_2+\dots+a_k\ge 0(k=1,2,3,\dots,2n)$$，序列个数为？
+
+
+
+### 斯特林数
+
+##### 第二类斯特林数(斯特林子集数)
+
+$$S(n,k)$$表示将$$n$$个两两不同的元素，划分为$$k$$个互不区分的非空子集的方案数
+$$
+S(n,k)=S(n-1,k-1)+k\cdot S(n-1,k),\ S(n,0)=[n==0]
+$$
+
+$$
+S(n,m)=\sum_{i=0}^m\frac{(-1)^{m-i}i^n}{i!(m-i)!}
+$$
+
+##### 第一类斯特林数(斯特林轮换数)
+
+$$s(n,k)$$表示将$$n$$个两两不同的元素，划分为$$k$$个互不区分的非空轮换的方案数
+$$
+s(n,k)=s(n-1,k-1)+(n-1)\cdot s(n-1,k),\ s(n,0)=[n==0]
+$$
+
+
 ## 字符串
 
 ### KMP
@@ -1323,8 +1770,8 @@ void manacher()
 ### 字典树
 
 ```cpp
-struct Trie{
-    int cnt=0,ch[N][26],sz[N];//sz[N]是以这个点结尾的字符串数量
+struct Trie{//maxL是字符串总长
+    int cnt=0,ch[maxL][26],sz[maxL],Cnt[maxL];//sz[maxL]是以这个点结尾的字符串数量
     int newNode(){
         cnt++;
         sz[cnt]=0;
@@ -1338,6 +1785,7 @@ struct Trie{
             if(!c)
                 c=newNode();
             now=c;
+            Cnt[now]++;
         }
         sz[now]++;
     }
@@ -1384,6 +1832,216 @@ hashv operator * (hashv a, hashv b) {
 }
 
 ```
+
+## 博弈论
+
+### Nim游戏
+
+##### 简介
+
+$$n$$堆物品，每堆有$$a_i$$个，两个玩家轮流取走任意一堆的任意个物品，但不能不取，取走最后一个物品的获胜
+
+##### Nim和
+
+定义Nim和$$=a_1\oplus a_2\oplus\dots\oplus a_n$$
+
+当且仅当Nim和为0时，状态为必败状态，否则为必胜状态
+
+### SG函数
+
+##### mex函数
+
+值为不属于集合$$S$$中的最小非负整数
+$$
+mex(S)=\min\{x\}\ (x\notin S,x\in N)
+$$
+
+##### SG函数
+
+设状态$$x$$的后继为$$y_1,y_2,\dots,y_k$$，
+$$
+SG(x)=mex\{SG(y_1),SG(y_2),\dots,SG(y_k)\}
+$$
+对于由$$n$$个有向图游戏组成的组合游戏，设起点分别为$$s_1,s_2,\dots,s_n$$，当且仅当$$SG(s_1)\oplus SG(s_2)\oplus\dots\oplus SG(s_n)\not =0$$时，这个游戏是先手必胜的，同时，这是一个组合游戏的游戏状态$$x$$的$$SG$$的
+
+
+
+
+
+## 多项式
+
+### 常见的幂级数展开
+
+$$
+e^x=1+x+\frac{1}{2!}x^2+\dots +\frac{1}{n!}x^n+\dots
+$$
+
+$$
+(1+x)^a=1+ax+\frac{a(a-1)}{2!}x^2+\dots+\frac{a(a-1)\dots (a-n+1)}{n!}x^n+\dots
+$$
+
+$$
+\cos x=1-\frac{1}{2!}x^2+\frac{1}{4!}x^4+\dots+\frac{(-1)^n}{(2n)!}x^{2n}+\dots
+$$
+
+$$
+\sin x=x-\frac{1}{3!}x^3+\frac{1}{5!}x^5+\dots+\frac{(-1)^n}{(2n+1)!}x^{2n+1}+\dots
+$$
+
+$$
+\frac{1}{1+x}=1-x+x^2+\dots+(-1)^nx^n+\dots
+$$
+
+$$
+\ln(1+x)=x-\frac{1}{2}x^2+\frac{1}{3}x^3+\dots+\frac{(-1)^{n-1}}{n}x^n+\dots
+$$
+
+$$
+\frac{1}{1+x^2}=1-x^2+x^4+\dots+(-1)^nx^{2n}+\dots
+$$
+
+
+
+### 生成函数
+
+$$
+F(x)=\sum_na_nk_n(x)
+$$
+
+$$k_n(x)$$为核函数
+
+- 普通生成函数：$$k_n(x)=x^n$$
+- 指数生成函数：$$k_n(x)=\frac{x^n}{n!}$$
+- 狄利克雷生成函数：$$k_n(x)=\frac{1}{n^x}$$
+
+
+
+##### 计算方式
+
+通常在封闭形式和展开形式间转换进行计算
+
+1. 对于任意多项式$$P(x),Q(x)$$，生成函数$$\frac{P(x)}{Q(x)}$$的展开式都可以用待定系数法求出
+
+   当对分母进行因式分解但有重根时，每有一个重根就要多一个分式
+
+   如$$G(x)=\frac{1}{(1-x)(1-2x)^2}\Rightarrow G(x)=\frac{c_0}{1-x}+\frac{c_1}{1-2x}+\frac{c_2}{(1-2x)^2}$$
+
+2. 牛顿二项式定理
+   $$
+   C_r^k=\frac{r(r-1)(r-2)\dots(r-k+1)}{k},\ k\in N,r\in R
+   $$
+   
+   $$
+   (1+x)^\alpha=\sum_{n\ge0}C_n^\alpha x^n
+   $$
+   
+
+### 快速傅里叶变换(FFT)
+
+以$$O(n\log n)$$的速度计算两个$$n$$度多项式乘法
+
+```cpp
+#include<bits/stdc++.h>
+using namespace std;
+
+const double PI = acos(-1.0);
+const double eps=1e-4;
+
+struct Complex
+{
+    double x, y;
+    Complex(double x = 0.0, double y = 0.0):x(x),y(y){}
+    Complex operator-(const Complex &b) const{return Complex(x - b.x, y - b.y);}
+    Complex operator+(const Complex &b) const{return Complex(x + b.x, y + b.y);}
+    Complex operator*(const Complex &b) const{return Complex(x * b.x - y * b.y, x * b.y + y * b.x);}
+};
+/*
+ * 进行 FFT 和 IFFT 前的反置变换
+ * 位置 i 和 i 的二进制反转后的位置互换
+ *len 必须为 2 的幂
+ */
+void change(Complex y[], int len)
+{
+    int i, j, k;
+    for (int i = 1, j = len / 2; i < len - 1; i++)
+    {
+        if (i < j)
+            swap(y[i], y[j]);
+        // 交换互为小标反转的元素，i<j 保证交换一次
+        // i 做正常的 + 1，j 做反转类型的 + 1，始终保持 i 和 j 是反转的
+        k = len / 2;
+        while (j >= k)
+        {
+            j = j - k;
+            k = k / 2;
+        }
+        if (j < k)
+            j += k;
+    }
+}
+
+/*
+ * 做 FFT
+ *len 必须是 2^k 形式
+ *on == 1 时是 DFT，on == -1 时是 IDFT
+ */
+void fft(Complex y[], int len, int on)
+{
+    change(y, len);
+    for (int h = 2; h <= len; h <<= 1)
+    {
+        Complex wn(cos(2 * PI / h), sin(on * 2 * PI / h));
+        for (int j = 0; j < len; j += h)
+        {
+            Complex w(1, 0);
+            for (int k = j; k < j + h / 2; k++)
+            {
+                Complex u = y[k];
+                Complex t = w * y[k + h / 2];
+                y[k] = u + t;
+                y[k + h / 2] = u - t;
+                w = w * wn;
+            }
+        }
+    }
+    if (on == -1)
+        for (int i = 0; i < len; i++)
+            y[i].x /= len;
+}
+const int N = 1e7+5;
+Complex a[N],b[N];
+int res[N];
+int main()
+{
+    ios::sync_with_stdio(false);cin.tie(0);
+    int n,m;
+    cin>>n>>m;
+    int len=1;
+    while(len<(n+1)*2||len<(m+1)*2)
+        len<<=1;
+    for(int i=0;i<=n;i++)
+        cin>>a[i].x;
+    for(int i=0;i<=m;i++)
+        cin>>b[i].x;
+    fft(a,len,1);
+    fft(b,len,1);
+    for(int i=0;i<len;i++)
+        a[i]=a[i]*b[i];
+    fft(a,len,-1);
+    for(int i=0;i<len;i++)
+        res[i]=(int)(a[i].x+0.5);
+    for(int i=0;i<=n+m;i++)
+        cout<<res[i]<<' ';
+    cout<<'\n';
+    return 0;
+}
+```
+
+### 快速数论变换(NTT)
+
+
+
+
 
 ## 计算几何
 
@@ -1765,109 +2423,6 @@ void min_cover_circle(Point *p, int n, Point &c, double &r){ //最小圆覆盖
         }
 }
 ```
-
-## 多项式
-
-### FFT
-
-```cpp
-#include<bits/stdc++.h>
-using namespace std;
-
-const double PI = acos(-1.0);
-const double eps=1e-4;
-
-struct Complex
-{
-    double x, y;
-    Complex(double x = 0.0, double y = 0.0):x(x),y(y){}
-    Complex operator-(const Complex &b) const{return Complex(x - b.x, y - b.y);}
-    Complex operator+(const Complex &b) const{return Complex(x + b.x, y + b.y);}
-    Complex operator*(const Complex &b) const{return Complex(x * b.x - y * b.y, x * b.y + y * b.x);}
-};
-/*
- * 进行 FFT 和 IFFT 前的反置变换
- * 位置 i 和 i 的二进制反转后的位置互换
- *len 必须为 2 的幂
- */
-void change(Complex y[], int len)
-{
-    int i, j, k;
-    for (int i = 1, j = len / 2; i < len - 1; i++)
-    {
-        if (i < j)
-            swap(y[i], y[j]);
-        // 交换互为小标反转的元素，i<j 保证交换一次
-        // i 做正常的 + 1，j 做反转类型的 + 1，始终保持 i 和 j 是反转的
-        k = len / 2;
-        while (j >= k)
-        {
-            j = j - k;
-            k = k / 2;
-        }
-        if (j < k)
-            j += k;
-    }
-}
-
-/*
- * 做 FFT
- *len 必须是 2^k 形式
- *on == 1 时是 DFT，on == -1 时是 IDFT
- */
-void fft(Complex y[], int len, int on)
-{
-    change(y, len);
-    for (int h = 2; h <= len; h <<= 1)
-    {
-        Complex wn(cos(2 * PI / h), sin(on * 2 * PI / h));
-        for (int j = 0; j < len; j += h)
-        {
-            Complex w(1, 0);
-            for (int k = j; k < j + h / 2; k++)
-            {
-                Complex u = y[k];
-                Complex t = w * y[k + h / 2];
-                y[k] = u + t;
-                y[k + h / 2] = u - t;
-                w = w * wn;
-            }
-        }
-    }
-    if (on == -1)
-        for (int i = 0; i < len; i++)
-            y[i].x /= len;
-}
-const int N = 1e7+5;
-Complex a[N],b[N];
-int res[N];
-int main()
-{
-    ios::sync_with_stdio(false);cin.tie(0);
-    int n,m;
-    cin>>n>>m;
-    int len=1;
-    while(len<(n+1)*2||len<(m+1)*2)
-        len<<=1;
-    for(int i=0;i<=n;i++)
-        cin>>a[i].x;
-    for(int i=0;i<=m;i++)
-        cin>>b[i].x;
-    fft(a,len,1);
-    fft(b,len,1);
-    for(int i=0;i<len;i++)
-        a[i]=a[i]*b[i];
-    fft(a,len,-1);
-    for(int i=0;i<len;i++)
-        res[i]=(int)(a[i].x+0.5);
-    for(int i=0;i<=n+m;i++)
-        cout<<res[i]<<' ';
-    cout<<'\n';
-    return 0;
-}
-```
-
-
 
 ### 高精度
 
