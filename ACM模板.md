@@ -463,11 +463,167 @@ void tarjan(int x,int f)
 }
 ```
 
+### 最短路
+
+##### Floyd
+
+时间复杂度$$O(n^3)$$，空间复杂度$$O(n^2)$$
+
+```cpp
+for (k = 1; k <= n; k++) 
+    for (x = 1; x <= n; x++) 
+        for (y = 1; y <= n; y++) 
+            f[x][y] = min(f[x][y], f[x][k] + f[k][y]);
+```
+
+##### Bellman-ford
+
+对于边$$(u,v)$$，松弛操作对应$$dis(v)=min(dis(v),dis(u)+w(u,v))$$
+
+最短路存在的情况下，最多经过$$n-1$$次松弛操作，时间复杂度为$$O(nm)$$
+
+
+
+可以用于判图中是否有负环，如果从$$s$$点没跑出负环，只能说明从$s$点出发不能抵达负环，并不能说明图中没有负环
+
+可以建立一个超级源点，向图上每一个节点连一个权值为0的边，对超级源点执行$$Bellman-ford$$
+
+```cpp
+int dis[N];
+bool bellmanford(int n,int s){\\图的点数为n,出发点为s
+    memset(dis,63,sizeof(dis));
+    dis[s]=0;
+    bool flag=false;
+    for(int i=1;i<=n;i++){
+        flag=false;
+        for(int j=1;j<=n;j++){
+            if(dis[j]==inf)
+                continue;
+            for(auto [it,w]:G[j]){
+                if(dis[it]>dis[j]+w){
+                    dis[it]=dis[j]+w;
+                    flag=true;
+                }
+            }
+        }
+        if(!flag)
+            break;
+    }
+    return flag;
+}
+```
+
+##### SPFA
+
+```cpp
+int dis[N],cnt[N];
+bool vis[N];
+queue<int>q;
+bool spfa(int n,int s){
+    memset(dis,63,sizeof(dis));
+    dis[s]=0;vis[s]=true;
+    q.push(s);
+    while(q.size()){
+        int tmp=q.front();
+        q.pop();
+        vis[tmp]=false;
+        for(auto [it,w]:G[tmp]){
+            if(dis[it]>dis[tmp]+w){
+                dis[it]=dis[tmp]+w;
+                cnt[it]=cnt[tmp]+1;
+                if(cnt[it]>=n)
+                    return false;
+                if(!vis[it]){
+                    q.push(it);
+                    vis[it]=true;
+                }
+            }
+        }
+    }
+    return true;
+}
+```
+
+##### Dijkstra
+
+优先队列实现
+
+复杂度$O(m\log m)$
+
+```cpp
+int dis[N];
+bool vis[N];
+priority_queue<pii,vector<pii>,greater<pii>>pq;//{距离，点}
+void Dijkstra(int n,int s){
+    memset(dis,63,sizeof(dis));
+    dis[s]=0;
+    pq.push({0,s});
+    while(pq.size()){
+        pii tmp=pq.top();
+        pq.pop();
+        if(vis[tmp.second])
+            continue;
+        vis[tmp.second]=true;
+        for(auto [it,w]:G[tmp.second]){
+            if(dis[it]>dis[tmp.second]+w){
+                dis[it]=dis[tmp.second]+w;
+                pq.push({dis[it],it});
+            }
+        }
+    }
+}
+```
+
+暴力实现
+
+复杂度$O(n^2)$
+
+```cpp
+int dis[N];
+bool vis[N];
+void Dijkstra(int n,int s){
+    memset(dis,0x3f,sizeof(dis));
+    dis[s]=0;
+    for(int i=1;i<=n;i++){
+        int k=0,m=1e15;
+        for(int j=1;j<=n;j++){
+            if(!vis[j]&&dis[j]<m){
+                k=j;m=dis[j];
+            }
+        }
+        vis[k]=1;
+        for(auto [it,w]:G[k])
+            dis[it]=min(dis[it],dis[k]+w);
+    }
+}
+```
+
+
+
+### 差分约束
+
+$n$个变量$x_1,x_2,\dots,x_n$以及$m$个约束条件$x_i-x_j\le c_k$
+
+约束是否有解，如果有解，给出一组解
+
+$x_i-x_j\le c_k\iff x_i\le x_j+c_k$，类比单源最短路中的三角形不等式 $dist[y]\le dist[x]+z$
+
+将$j$向$i$连长度为$c_k$的有向边，设超级源点$0$，向每个点连一条权为$0$的有向边，跑spfa，若图中有负环，则无解；否则$x_i=dist[i]$就是一组解
+
 ### 缩点
 
 将强连通分量缩为一个点，原图变为DAG
 
 ##### Tarjan缩点
+
+$$num[N],low[N]$$
+
+- $$num$$值：dfs时这个点的时间戳
+- $$low$$值：能返回的最远祖先的时间戳
+
+相同$low$值的属于一个$SCC$，在dfs的同时把点按$SCC$分开
+
+复杂度$O(n+m)$
 
 ```cpp
 const int N=1e4+5;
@@ -512,7 +668,13 @@ void Tarjan(int n){
 }
 ```
 
-##### Korasaju缩点
+##### Kosaraju缩点
+
+1. 原图的反图（边的方向取反）的连通性不变
+
+2. 按原图的dfs的逆序开始dfs反图，可以将强连通分量挖出来
+
+复杂度$$O(n+m)$$
 
 ```cpp
 const int N=1e4+5;
@@ -555,9 +717,21 @@ void Korasaju(int n){
 }
 ```
 
+### 2-SAT
+
+$n$个集合，每个集合两个元素，已知若干个$<a,b>$，表示$a$与$b$矛盾（$a,b$属于不同集合），从每个集合选一个元素，判断能否选$n$个两两不矛盾的元素
+
+可以变为布尔方程，选$a$则必选$b$，则连$a\rightarrow b$的有向边，在图上缩点之后判断是否有一个集合中的两个数在一个$SCC$里
+
+
+
 ### 树链剖分
 
 ##### 重链剖分
+
+- $id[x]$：$x$点的$dfs$序
+- $rk[x]$：$dfs$序为$x$的节点
+- $top[x]$：$x$所在重链的顶部节点
 
 ```cpp
 int sz[N],top[N],rk[N],id[N],son[N],fa[N],deep[N];
@@ -1074,7 +1248,7 @@ void init()
 
 ##### Miller Rabin
 
-复杂度$$O(\log n)$$
+复杂度$$O(k\log n)$$
 
 ```cpp
 bool is_prime(int x)
@@ -1115,24 +1289,86 @@ bool is_prime(int x)
 找出一个约数的时间复杂度$$O(n^{\frac{1}{4}})$$
 
 ```cpp
-mt19937 eng(time(0));
-int randint(int a, int b)
+mt19937_64 rnd(time(0));
+namespace Pollard_Rho
 {
-    uniform_int_distribution<int> dis(a, b);
-    return dis(eng);
-}
-int Pollard_Rho(int n){
-    if(n==4)    return 2;
-    if(is_prime(n)) return n;
-    while(true){
-        int c=randint(1,n-1);
-        auto f=[=](int x){return ((__int128_t)x*x+c)%n;};
-        int t=f(0),r=f(f(0));
-        while(t!=r){
-            int d=__gcd(abs(t-r),n);
-            if(d>1) return d;
-            t=f(t),r=f(f(r));
+    #define ldb long double
+    long long mul(long long x, long long y, long long mod)
+    {
+        return ((x * y - (long long)((ldb)x / mod * y) * mod) + mod) % mod;
+    }
+    long long gcd(long long a, long long b)
+    {
+        return (b == 0 ? a : gcd(b, a % b));
+    }
+    long long ksm(long long a, long long b, long long mod)
+    {
+        long long ans = 1; a %= mod;
+        while (b) {if (b & 1)ans = mul(ans, a, mod); b >>= 1; a = mul(a, a, mod);}
+        return ans;
+    }
+    int pr[15] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37};
+    bool Miller_Rabin(long long n)
+    {
+        if (n == 2 || n == 3)return 1;
+        if (n % 2 == 0 || n == 1)return 0;
+        long long d = n - 1;
+        int s = 0;
+        while (d % 2 == 0)s ++, d >>= 1;
+        for (int i = 0; i <= 11; i ++)
+        {
+            if (pr[i] >= n)break;
+            long long a = pr[i];
+            long long x = ksm(a, d, n);
+            long long y = 0;
+            for (int j = 0; j <= s - 1; j ++)
+            {
+                y = mul(x, x, n);
+                if (y == 1 && x != 1 && x != (n - 1))return 0;
+                x = y;
+            }
+            if (y != 1)return 0;
         }
+        return 1;
+    }
+    long long Pollard_Rho(long long n)
+    {
+        long long now, pre, g;
+        while (true)
+        {
+            now = pre = rnd() % (n - 1) + 1;
+            g = 1;
+            long long c = rnd() % (n - 1) + 1;
+            for (int i = 1, fst = 1 ;; i ++)
+            {
+                now = (mul(now, now, n) + c) % n;
+                g = mul(g, abs(now - pre), n);
+                if (now == pre || !g)break;
+                if (!(i & 127) || i == fst)
+                {
+                    g = gcd(g, n);
+                    if (g > 1)return g;
+                    if (i == fst)pre = now, fst <<= 1;
+                }
+            }
+        }
+    }
+    void Find(long long n, map<long long, long long>& _P, int c = 1)
+    {
+        if (n == 1)return ;
+        if (Miller_Rabin(n))
+        {
+            _P[n] += c;
+            return;
+        }
+        long long p = Pollard_Rho(n);
+        int cnt = 0;
+        while (!(n % p))
+        {
+            n /= p, cnt ++;
+        }
+        Find(p, _P, cnt * c);
+        Find(n, _P, c);
     }
 }
 ```
@@ -1414,7 +1650,7 @@ ll f(ll a, ll b, ll c, ll n) {
   \delta_m(a^k)=\frac{\delta_m(a)}{(\delta_m(a),k)}
   $$
 
-- 
+
 
 ### 原根
 
@@ -1460,7 +1696,7 @@ $$
   [gcd(i,j)==1]=\sum_{d\mid gcd(i,j)}\mu(d)
   $$
 
-- 
+
 
 ##### 莫比乌斯变换
 
@@ -1864,7 +2100,9 @@ SG(x)=mex\{SG(y_1),SG(y_2),\dots,SG(y_k)\}
 $$
 对于由$$n$$个有向图游戏组成的组合游戏，设起点分别为$$s_1,s_2,\dots,s_n$$，当且仅当$$SG(s_1)\oplus SG(s_2)\oplus\dots\oplus SG(s_n)\not =0$$时，这个游戏是先手必胜的，同时，这是一个组合游戏的游戏状态$$x$$的$$SG$$的
 
+##### 打表SG函数
 
+记忆化搜索或者dp
 
 
 
