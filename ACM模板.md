@@ -115,6 +115,22 @@ ll qpow(ll a,ll n,ll m)
 }
 ```
 
+### pair哈希
+
+```cpp
+struct pair_hash
+{
+    template <class T1, class T2>
+    size_t operator () (pair<T1, T2> const &pair) const
+    {
+        size_t h1 = hash<T1>()(pair.first);
+        size_t h2 = hash<T2>()(pair.second);
+        return h1 ^ h2;
+    }
+};
+unordered_set<pair<int,int>,pair_hash>st;
+```
+
 ### 时间种子unordered_map
 
 ```cpp
@@ -490,7 +506,7 @@ for (k = 1; k <= n; k++)
 
 ```cpp
 int dis[N];
-bool bellmanford(int n,int s){\\图的点数为n,出发点为s
+bool bellmanford(int n,int s){//图的点数为n,出发点为s
     memset(dis,63,sizeof(dis));
     dis[s]=0;
     bool flag=false;
