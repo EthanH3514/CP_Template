@@ -1168,22 +1168,42 @@ void mod_inverse(ll n,ll p)
 }
 ```
 
-### 欧拉筛
-
-##### 筛素数
+### 埃氏筛法
 
 ```cpp
 bitset<N>vis;
-void get_prime()
+void get_prime(int n)
 {
-    for(int i=2;i<N;i++)
+    for(int i=2;i<=n;i++)
     {
         if(!vis[i])
         {
             vis[i]=true;
             p.push_back(i);
-            for(int j=2;i*j<N;j++)
-                vis[i*j]=true;
+            for(int j=i*i;j<=n;j+=i)
+                vis[j]=1;
+        }
+    }
+}
+```
+
+### 欧拉筛
+
+##### 筛素数
+
+```cpp
+bool vis[N];
+vector<int>p;
+void init(int n){
+    for(int i=2;i<=n;i++){
+        if(!vis[i])
+            p.push_back(i);
+        for(auto it:p){
+            if(1ll*i*it>n)
+                break;
+            vis[i*it]=1;
+            if(i%it==0)
+                break;
         }
     }
 }
@@ -2189,6 +2209,14 @@ $$k_n(x)$$为核函数
    (1+x)^\alpha=\sum_{n\ge0}C_n^\alpha x^n
    $$
    
+2. 推论:
+   $$
+   \frac{1}{(1-x)^n}=\sum_{k=0}^\infin C_{n+k-1}^k x^k
+   $$
+   
+4. 
+
+
 
 ### 快速傅里叶变换(FFT)
 
@@ -2678,7 +2706,42 @@ void min_cover_circle(Point *p, int n, Point &c, double &r){ //最小圆覆盖
 }
 ```
 
-### 高精度
+### 三维计算几何
+
+```cpp
+struct Point{
+    double x,y,z;
+    Point(){};
+    Point(double x,double y,double z):x(x),y(y),z(z){};
+    Point operator - (Point t){
+        return Point(x-t.x,y-t.y,z-t.z);
+    }
+    Point operator + (Point t){
+        return Point(x+t.x,y+t.y,z+t.z);
+    }
+    Point operator / (double k){
+        return Point(x/k,y/k,z/k);
+    }
+    double operator * (Point t){
+        return x*t.x+y*t.y+z*t.z;
+    }
+    Point operator ^ (Point t){
+        return Point(y*t.z-z*t.y,z*t.x-x*t.z,x*t.y-y*t.x);
+    }
+    double len(){
+        return sqrt(x*x+y*y+z*z);
+    }
+    Point unit(){
+        return *this/len();
+    }
+};
+```
+
+
+
+
+
+## 高精度
 
 ```cpp
 #ifndef __x86_64__
@@ -2864,3 +2927,33 @@ std::ostream &operator<<(std::ostream &st,const bigint &a){
     return st<<(std::string)(a);
 }
 ```
+
+## 对拍
+
+```cpp
+#pragma GCC optimize(2)
+#include<bits/stdc++.h>
+using namespace std;
+typedef long long ll;
+#define int long long
+typedef unsigned long long ull;
+#define dmp(x) cerr<<"DEBUG"<<__LINE__<<":"<<#x<<" "<<x<<endl
+const ll INF=0x3f3f3f3f3f3f3f3fLL;
+typedef pair<int,int> pii;
+signed main() {
+    ios::sync_with_stdio(false);cin.tie(0);
+    while(true){
+        system("gene.exe>data.txt");
+        system("A.exe<data.txt>out.txt");
+        system("B.exe<data.txt>ans.txt");
+        if(system("fc out.txt ans.txt")){// Windows
+            break;
+        }
+        // if(system("diff out.txt ans.txt")){// Linux
+        //     break;
+        // }
+    }
+    return 0;
+}
+```
+
