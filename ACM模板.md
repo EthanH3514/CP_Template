@@ -153,6 +153,20 @@ unordered_map<uint64_t, int, custom_hash> safe_map;
 
 ### 并查集
 
+##### 普通并查集
+
+```cpp
+int f[N];
+int find(int x){
+    return x==f[x]?x:f[x]=find(f[x]);
+}
+void merge(int x,int y){
+    x=find(x),y=find(y);
+    if(x!=y)
+        f[x]=y;
+}
+```
+
 ##### 带权并查集
 
 ```cpp
@@ -877,6 +891,88 @@ int query_tree(int x){
     return Tr.query(id[x],id[x]+sz[x]-1,1,1,n)%mod;
 }
 ```
+
+### 树上启发式合并(DSU on tree)
+
+常用于不带修子树询问
+
+对于节点$i$
+
+- 递归轻儿子，消除递归的影响
+- 递归重儿子，不消除递归的影响
+- 统计所有轻儿子对答案的影响
+- 更新该节点答案
+- 删除所有轻儿子对答案的影响
+
+主题框架：
+
+```cpp
+void dfs(int x,int fa,int opt){
+    for(auto it:G[x]){
+        if(it==fa)
+            continue;
+       	if(it!=son[x])
+            dfs(it,x,0);//暴力统计轻边的贡献
+    }
+    if(son[x])	dfs(son[x],x,1);//统计重儿子的贡献，不消除影响
+    add(x);//暴力统计所有轻儿子的贡献
+    ans[x]=NowAns;//更新答案
+    if(!opt)	delet(x);//需要删除贡献的话就删掉
+}
+```
+
+示例代码：
+
+```cpp
+int c[N],sz[N],son[N],cnt[N],sum,Mx,Son,ans[N];
+vector<int>G[N];
+void dfs1(int x,int f){
+    sz[x]=1;
+    for(auto it:G[x]){
+        if(it==f)
+            continue;
+        dfs1(it,x);
+        sz[x]+=sz[it];
+        if(!son[x]||sz[son[x]]<sz[it])
+            son[x]=it;
+    }
+}
+void add(int x,int f,int val){
+    cnt[c[x]]+=val;
+    if(cnt[c[x]]>Mx){
+        Mx=cnt[c[x]];
+        sum=c[x];
+    }
+    else if(cnt[c[x]]==Mx)
+        sum+=c[x];
+    for(auto it:G[x]){
+        if(it==f||it==Son)
+            continue;
+        add(it,x,val);
+    }
+}
+void dfs2(int x,int f,int opt){
+    for(auto it:G[x]){
+        if(it==f||it==son[x])
+            continue;
+        dfs2(it,x,0);
+    }
+    if(son[x]){
+        dfs2(son[x],x,1);
+        Son=son[x];
+    }
+    add(x,f,1);Son=0;
+    ans[x]=sum;
+    if(!opt){
+        add(x,f,-1);
+        Mx=sum=0;
+    }
+}
+```
+
+
+
+
 
 ### 网络流
 
@@ -2076,33 +2172,25 @@ struct Trie{//maxL是字符串总长
 ### 双哈
 
 ```cpp
-#define mp make_pair
-#define fi first
-#define se second
-using ll = long long;
 typedef pair<int, int> hashv;
 const ll mod1 = 1e9 + 7;
 const ll mod2 = 1e9 + 9;
-
-hashv base = mp(13331, 2333);
+hashv base = make_pair(13331, 2333);
 hashv operator + (hashv a, hashv b) {
-    int c1 = a.fi + b.fi, c2 = a.se + b.se;
+    int c1 = a.first + b.first, c2 = a.second + b.second;
     if(c1 >= mod1) c1 -= mod1;
     if(c2 >= mod2) c2 -= mod2;
-    return mp(c1, c2);
+    return make_pair(c1, c2);
 }
-
 hashv operator - (hashv a, hashv b) {
-    int c1 = a.fi - b.fi, c2 = a.se - b.se;
+    int c1 = a.first - b.first, c2 = a.second - b.second;
     if(c1 < 0) c1 += mod1;
     if(c2 < 0) c2 += mod2;
-    return mp(c1,c2);
+    return make_pair(c1,c2);
 }
-
 hashv operator * (hashv a, hashv b) {
-    return mp(1ll*a.fi*b.fi%mod1, 1ll*a.se*b.se%mod2);
+    return make_pair(1ll*a.first*b.first%mod1, 1ll*a.second*b.second%mod2);
 }
-
 ```
 
 ## 博弈论
@@ -2223,101 +2311,81 @@ $$k_n(x)$$为核函数
 以$$O(n\log n)$$的速度计算两个$$n$$度多项式乘法
 
 ```cpp
-#include<bits/stdc++.h>
-using namespace std;
+namespace FFT{
+    #define el '\n'
+    #define rep(i, a, b) for (int i = (a); i <= (b); i++)
+    #define lop(i, a, b) for (int i = (a); i < (b); i++)
+    #define dwn(i, a, b) for (int i = (a); i >= (b); i--)
+    #define ceil(a, b) (a + (b - 1)) / b
+    #define db double
 
-const double PI = acos(-1.0);
-const double eps=1e-4;
+    constexpr int N = 4e6 + 10, M = 4e6 + 10, B = 66, md = 1e9 + 7;
+    const double PI = acos(-1.0), eps = 1e-8;
 
-struct Complex
-{
-    double x, y;
-    Complex(double x = 0.0, double y = 0.0):x(x),y(y){}
-    Complex operator-(const Complex &b) const{return Complex(x - b.x, y - b.y);}
-    Complex operator+(const Complex &b) const{return Complex(x + b.x, y + b.y);}
-    Complex operator*(const Complex &b) const{return Complex(x * b.x - y * b.y, x * b.y + y * b.x);}
-};
-/*
- * 进行 FFT 和 IFFT 前的反置变换
- * 位置 i 和 i 的二进制反转后的位置互换
- *len 必须为 2 的幂
- */
-void change(Complex y[], int len)
-{
-    int i, j, k;
-    for (int i = 1, j = len / 2; i < len - 1; i++)
+    int T, n, m;
+
+    struct Complex
     {
-        if (i < j)
-            swap(y[i], y[j]);
-        // 交换互为小标反转的元素，i<j 保证交换一次
-        // i 做正常的 + 1，j 做反转类型的 + 1，始终保持 i 和 j 是反转的
-        k = len / 2;
-        while (j >= k)
+        double x, y;
+        Complex(){}
+        Complex(double x,double y):x(x),y(y){}
+        Complex operator+(const Complex &t) const
         {
-            j = j - k;
-            k = k / 2;
+            return {x + t.x, y + t.y};
         }
-        if (j < k)
-            j += k;
-    }
-}
-
-/*
- * 做 FFT
- *len 必须是 2^k 形式
- *on == 1 时是 DFT，on == -1 时是 IDFT
- */
-void fft(Complex y[], int len, int on)
-{
-    change(y, len);
-    for (int h = 2; h <= len; h <<= 1)
-    {
-        Complex wn(cos(2 * PI / h), sin(on * 2 * PI / h));
-        for (int j = 0; j < len; j += h)
+        Complex operator-(const Complex &t) const
         {
-            Complex w(1, 0);
-            for (int k = j; k < j + h / 2; k++)
+            return {x - t.x, y - t.y};
+        }
+        Complex operator*(const Complex &t) const
+        {
+            return {x * t.x - y * t.y, x * t.y + y * t.x};
+        }
+
+    } a[N], b[N];
+
+    int rev[N], bit, tot, res[N];
+    void fft(Complex a[], int inv)
+    {
+        for (int i = 0; i < tot; i++)
+        {
+            if (i < rev[i])
+                swap(a[i], a[rev[i]]); //只需要交换一次就行了，交换两次等于没有换
+        }
+        for (int mid = 1; mid < tot; mid <<= 1)
+        {
+            auto w1 = Complex({cos(PI / mid), inv * sin(PI / mid)});
+            for (int i = 0; i < tot; i += mid * 2)
             {
-                Complex u = y[k];
-                Complex t = w * y[k + h / 2];
-                y[k] = u + t;
-                y[k + h / 2] = u - t;
-                w = w * wn;
+                auto wk = Complex({1, 0});                  //初始为w(0,mid),定义为w(k,mid)
+                for (int j = 0; j < mid; j++, wk = wk * w1) //单位根递推式
+                {
+                    auto x = a[i + j], y = wk * a[i + j + mid];
+                    a[i + j] = x + y, a[i + j + mid] = x - y;
+                }
             }
         }
     }
-    if (on == -1)
-        for (int i = 0; i < len; i++)
-            y[i].x /= len;
-}
-const int N = 1e7+5;
-Complex a[N],b[N];
-int res[N];
-int main()
-{
-    ios::sync_with_stdio(false);cin.tie(0);
-    int n,m;
-    cin>>n>>m;
-    int len=1;
-    while(len<(n+1)*2||len<(m+1)*2)
-        len<<=1;
-    for(int i=0;i<=n;i++)
-        cin>>a[i].x;
-    for(int i=0;i<=m;i++)
-        cin>>b[i].x;
-    fft(a,len,1);
-    fft(b,len,1);
-    for(int i=0;i<len;i++)
-        a[i]=a[i]*b[i];
-    fft(a,len,-1);
-    for(int i=0;i<len;i++)
-        res[i]=(int)(a[i].x+0.5);
-    for(int i=0;i<=n+m;i++)
-        cout<<res[i]<<' ';
-    cout<<'\n';
-    return 0;
+
+    void workFFT(int n, int m)
+    {// a[0, n], b[0, m]
+        while ((1 << bit) < n + m + 1)
+            bit++;
+        tot = 1 << bit;
+        for (int i = 0; i < tot; i++)
+            rev[i] = (rev[i >> 1] >> 1) | ((i & 1) << (bit - 1));
+        //递推(bit<<1)在bit之前，就已经被算出rev,最后一位是否为1
+        fft(a, 1), fft(b, 1);
+        for (int i = 0; i < tot; i++)
+            a[i] = a[i] * b[i]; //点表示法直接运算
+        fft(a, -1);//逆变换，点表示法转换为多项式表示法
+        for (int i = 0; i <= n + m; i++)
+            res[i]  = (int)(a[i].x / tot + 0.5); //向上去整
+    }
 }
 ```
+
+
 
 ### 快速数论变换(NTT)
 
