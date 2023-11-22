@@ -1116,55 +1116,36 @@ $$
 #### 例题 [洛谷 P3389](https://www.luogu.com.cn/problem/P3389)
 
 ```cpp
-#include<bits/stdc++.h>
-using namespace std;
-typedef long long ll;
-const int N=105;
-double a[N][N];
-double eps=1e-7;
-int main() {
-    ios::sync_with_stdio(false);cin.tie(nullptr);
-    int n;
-    scanf("%d",&n);
-    for(int i=1;i<=n;i++)
-    {
-        for(int j=1;j<=n+1;j++)
-            scanf("%lf",&a[i][j]);
-    }
-    for(int i=1;i<=n;i++)
-    {
-        int M=0,Mi=0;
-        for(int j=i;j<=n;j++)
-        {
-            if(fabs(a[j][i])>M)
-            {
-                M=fabs(a[j][i]);
-                Mi=j;
+namespace Gauss{
+    const int N=1e3+5;
+    double eps=1e-7;
+    bool solve(double a[N][N],int n){//n+1行为 Ax=b 矩阵方程右侧向量，运算后结果在 n+1 行
+        for(int i=1;i<=n;i++){
+            double M=0;
+            int Mi=0;
+            for(int j=i;j<=n;j++){
+                if(fabs(a[j][i])>M){
+                    M=fabs(a[j][i]);
+                    Mi=j;
+                }
+            }
+            for(int j=i;j<=n+1;j++)
+                swap(a[Mi][j],a[i][j]);
+            if(fabs(a[i][i])<eps){//无解
+                return false;
+            }
+            for(int j=n+1;j>=i;j--)
+                a[i][j]/=a[i][i];
+            for(int j=1;j<=n;j++){
+                if(j==i)
+                    continue;
+                double temp=a[j][i]/a[i][i];
+                for(int k=i;k<=n+1;k++)
+                    a[j][k]-=temp*a[i][k];
             }
         }
-        for(int j=i;j<=n+1;j++)
-            swap(a[Mi][j],a[i][j]);
-        if(fabs(a[i][i])<eps)
-        {
-            printf("No Solution\n");
-            return 0;
-        }
-        for(int j=n+1;j>=i;j--)
-            a[i][j]/=a[i][i];
-        for(int j=1;j<=n;j++)
-        {
-            if(j==i)
-                continue;
-            double temp=a[j][i]/a[i][i];
-            for(int k=i;k<=n+1;k++)
-            {
-                a[j][k]-=temp*a[i][k];
-            }
-        }
+        return true;
     }
-    for(int i=1;i<=n;i++)
-        printf("%.2lf\n",a[i][n+1]);
-    return 0;
 }
 ```
 
