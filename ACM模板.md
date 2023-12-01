@@ -201,21 +201,17 @@ bool merge(int a,int b,int d)
 ### 树状数组
 
 ```cpp
-#define lowbit(x) ((x) & -(x))
+inline int lowbit(int x){ return x & (-x); }
 int tree[N];
-void update(int x,int d)
-{
-    while(x<=N)
-    {
+void update(int x,int d){
+    while(x<=N){
         tree[x]+=d;
         x+=lowbit(x);
     }
 }
-int sum(int x)
-{
+int sum(int x){
     int ans=0;
-    while(x>0)
-    {
+    while(x>0){
         ans+=tree[x];
         x-=lowbit(x);
     }
@@ -376,6 +372,161 @@ SegmentTree tri;
 
 ```
 
+##### 区间取$max(x,a_i)$或$min(x,a_i)$  (吉老师线段树)
+
+```cpp
+#define lson l, m, rt << 1
+#define rson m + 1, r, rt << 1 | 1
+typedef long long LL;
+typedef unsigned long long uLL;
+LL z = 1;
+const int N = 1e6 + 5;
+struct SegmentBeats{//以下板子中都是(1,n,1,L,R) 先大区间、区间标号，然后当前区间左右界
+    int v1[N * 4], cnt[N * 4], tag[N * 4], v2[N * 4]; // v1是最大值，v2是次大值，tag 是最值标记，cnt 是最小值的个数 
+    LL sum[N * 4];
+    void pushup(int rt){
+        if(v1[rt << 1] > v1[rt << 1 | 1]){
+            v1[rt] = v1[rt << 1];
+            cnt[rt] = cnt[rt << 1];
+            v2[rt] = max(v2[rt << 1], v1[rt << 1 | 1]);
+        }
+        else if(v1[rt << 1] < v1[rt << 1 | 1]){
+            v1[rt] = v1[rt << 1 | 1];
+            cnt[rt] = cnt[rt << 1 | 1];
+            v2[rt] = max(v1[rt << 1], v2[rt << 1 | 1]);
+        }
+        else{
+            v1[rt] = v1[rt << 1];
+            cnt[rt] = cnt[rt << 1] + cnt[rt << 1 | 1];
+            v2[rt] = max(v2[rt << 1], v2[rt << 1 | 1]);
+        }
+        sum[rt] = sum[rt << 1] + sum[rt << 1 | 1];
+    }
+    void build(int l, int r, int rt){
+        tag[rt] = -1;
+        if(l == r){
+            int x;
+            cin>>x;
+            v1[rt] = sum[rt] = x, v2[rt] = -1, cnt[rt] = 1;//次大值初始化为 -1 
+            return;
+        }
+        int m = l + r >> 1;
+        build(lson);
+        build(rson);
+        pushup(rt);
+    }
+    void addtag(int rt, int c){
+        if(v1[rt] <= c) return;
+        sum[rt] -= z * cnt[rt] * (v1[rt] - c);//更新 sum 
+        v1[rt] = tag[rt] = c;//更新最值 
+    }
+    void pushdown(int rt){
+        if(tag[rt] != -1){
+            addtag(rt << 1, tag[rt]);//给左儿子加 tag 
+            addtag(rt << 1 | 1, tag[rt]);//给右儿子加 tag 
+            tag[rt] = -1;
+        }
+    }
+    void update(int l, int r, int rt, int a, int b, int c){
+        if(v1[rt] <= c) return;
+        if(l >= a && r <= b && v2[rt] < c){//该区间的最小值都变成 c 
+            addtag(rt, c);
+            return;
+        }
+        pushdown(rt);
+        int m = l + r >> 1;
+        if(a <= m) update(lson, a, b, c);
+        if(b > m) update(rson, a, b, c);
+        pushup(rt);
+    }
+    int query_max(int l, int r, int rt, int a, int b){
+        if(l >= a && r <= b) return v1[rt];
+        int m = l + r >> 1, ans = 0;
+        pushdown(rt);
+        if(a <= m) ans = max(ans, query_max(lson, a, b));
+        if(b > m) ans = max(ans, query_max(rson, a, b));
+        return ans;
+    }
+    LL query_sum(int l, int r, int rt, int a, int b){
+        if(l >= a && r <= b) return sum[rt];
+        int m = l + r >> 1;
+        LL ans = 0;
+        pushdown(rt);
+        if(a <= m) ans += query_sum(lson, a, b);
+        if(b > m) ans += query_sum(rson, a, b);
+        return ans;
+    }
+};
+```
+
+##### ODT
+
+在随机数据下以$O(n\log n\log n)$的速度实现
+
+- 区间加
+- 区间赋值
+- 求区间第k大值
+- 求区间n次方和
+
+```cpp
+struct node
+{
+    ll l, r;
+    mutable ll v; // 这里mutable要写不然可能会CE
+    node(ll l, ll r, ll v) : l(l), r(r), v(v) {} // 构造函数
+    bool operator<(const node &o) const { return l < o.l; } // 重载小于运算符
+};
+set<node> tree;
+auto split(ll pos)// <l,r,v> -> <l,pos-1,v>, <pos,r,v>
+{
+    auto it = tree.lower_bound(node(pos, 0, 0)); // 寻找左端点大于等于pos的第一个节点
+    if (it != tree.end() && it->l == pos) // 如果已经存在以pos为左端点的节点，直接返回
+        return it;
+    it--; // 否则往前数一个节点
+    ll l = it->l, r = it->r, v = it->v;
+    tree.erase(it); // 删除该节点
+    tree.insert(node(l, pos - 1, v)); // 插入<l,pos-1,v>和<pos,r,v>
+    return tree.insert(node(pos, r, v)).first; // 返回以pos开头的那个节点的迭代器
+                                               // insert默认返回值是一个pair，第一个成员是我们要的
+}
+void assign(ll l, ll r, ll v)//区间赋值 <l,r> a_i -> v
+{
+    auto end = split(r + 1), begin = split(l); // 顺序不能颠倒，否则可能RE
+    tree.erase(begin, end); // 清除一系列节点
+    tree.insert(node(l, r, v)); // 插入新的节点
+}
+void add(ll l, ll r, ll v)//区间加 <l,r> a_i -> a_i+v
+{
+    auto end = split(r + 1);
+    for (auto it = split(l); it != end; it++)
+        it->v += v;
+}
+ll kth(ll l, ll r, ll k)//求区间第k大 <l,r>
+{
+    auto end = split(r + 1);
+    vector<pair<ll, ll>> v; // 这个pair里存节点的值和区间长度
+    for (auto it = split(l); it != end; it++)
+        v.push_back(make_pair(it->v, it->r - it->l + 1));
+    sort(v.begin(), v.end()); // 直接按节点的值的大小排下序
+    for (int i = 0; i < v.size(); i++) // 然后挨个丢出来，直到丢出k个元素为止
+    {
+        k -= v[i].second;
+        if (k <= 0)
+            return v[i].first;
+    }
+}
+ll sum_of_pow(ll l, ll r, ll x, ll y)//求区间x次方和 模y
+{
+    ll tot = 0;
+    auto end = split(r + 1);
+    for (auto it = split(l); it != end; it++)
+        tot = (tot + qpow(it->v, x, y) * (it->r - it->l + 1)) % y; // qpow自己写一下
+    return tot;
+}
+```
+
+
+
 ## 图论
 
 ### 树的直径
@@ -417,8 +568,6 @@ void Dfs(int x,int f)
     }
 }
 ```
-
-
 
 ### LCA
 
@@ -586,6 +735,9 @@ bool vis[N];
 priority_queue<pii,vector<pii>,greater<pii>>pq;//{距离，点}
 void Dijkstra(int n,int s){
     memset(dis,63,sizeof(dis));
+   	memset(vis,false,sizeof(vis));
+    while(pq.size())
+        pq.pop();
     dis[s]=0;
     pq.push({0,s});
     while(pq.size()){
