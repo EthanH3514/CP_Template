@@ -1,1 +1,1 @@
-# ACM_Template
+# EthanH3514's XCPC-Template
